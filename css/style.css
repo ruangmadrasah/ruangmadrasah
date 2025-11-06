@@ -59,6 +59,13 @@
         .btn-danger:hover:not(:disabled) {
             background-color: var(--danger-hover);
         }
+        .btn-info {
+            background-color: #3b82f6; /* blue-500 */
+            color: white;
+        }
+        .btn-info:hover:not(:disabled) {
+            background-color: #2563eb; /* blue-600 */
+        }
         .btn-secondary {
             background-color: #f1f5f9; /* slate-100 */
             color: #1e293b; /* slate-800 */

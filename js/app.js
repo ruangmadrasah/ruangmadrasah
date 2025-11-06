@@ -272,11 +272,13 @@ const ui = {
         saveBtn: document.getElementById('save-profile-btn'),
         progressContainer: document.getElementById('upload-progress-container'),
         progressBar: document.getElementById('upload-progress'),
+        mapelInput: document.getElementById('profile-mapel')
     },
     daftarHadir: {
             filterKelas: document.getElementById('hadir-filter-kelas'),
             filterBulan: document.getElementById('hadir-filter-bulan'),
             filterTahun: document.getElementById('hadir-filter-tahun'),
+            filterMapel: document.getElementById('hadir-filter-mapel'),
             container: document.getElementById('daftar-hadir-container'),
         },
 jurnalMengajar: {
@@ -3846,7 +3848,12 @@ window.populateProfileForm = function() {
         previewEl.onerror = function() {
             previewEl.src = placeholder;
         };
-
+        if (userProfile.mapel && Array.isArray(userProfile.mapel)) {
+            // Gabungkan array menjadi string dipisahkan koma + spasi
+            ui.profile.mapelInput.value = userProfile.mapel.join(', ');
+        } else {
+            ui.profile.mapelInput.value = ''; // Kosongkan jika tidak ada data
+        }
         // Cek apakah data adalah URL yang valid (dimulai http)
         if (iconData && (iconData.startsWith('http') || iconData.startsWith('https:'))) {
             previewEl.src = iconData; // Set ke foto asli
@@ -4276,7 +4283,7 @@ window.populateSettingsForms = function() {
                 
                 // Set warna aktif jika status cocok
                 if (btn.dataset.absen === finalStatus) {
-                    if (finalStatus === 'S') btn.className = 'btn btn-sm btn-warning text-white h-8 w-8 !p-0'; // Oranye/Kuning
+                    if (finalStatus === 'S') btn.className = 'btn btn-sm btn-info h-8 w-8 !p-0'; // Biru
                     else if (finalStatus === 'I') btn.className = 'btn btn-sm btn-primary h-8 w-8 !p-0'; // Biru
                     else if (finalStatus === 'A') btn.className = 'btn btn-sm btn-danger h-8 w-8 !p-0'; // Merah
                 }
@@ -4284,6 +4291,37 @@ window.populateSettingsForms = function() {
 
             // 4. Update textarea tersembunyi
             updateAbsensiTextarea();
+        }
+        /**
+         * Mengisi dropdown Mapel di Jurnal & Filter Daftar Hadir
+         * berdasarkan profil guru.
+         */
+        function populateMapelDropdowns() {
+            const jurnalSelect = ui.jurnalMengajar.matapelajaran;
+            const hadirSelect = ui.daftarHadir.filterMapel;
+            if (!jurnalSelect || !hadirSelect) return;
+
+            // 1. Ambil data Mapel dari profil user yang login
+            const currentUser = window.appState.allUsers.find(u => u.id === window.appState.currentUserUID);
+            const mapelArray = currentUser?.mapel || [];
+
+            // Simpan nilai yang sedang dipilih (jika ada)
+            const currentJurnalVal = jurnalSelect.value;
+            const currentHadirVal = hadirSelect.value;
+
+            // 2. Kosongkan dropdown (sisakan opsi default)
+            while (jurnalSelect.options.length > 1) jurnalSelect.remove(1);
+            while (hadirSelect.options.length > 1) hadirSelect.remove(1);
+
+            // 3. Isi kedua dropdown
+            mapelArray.sort().forEach(mapel => {
+                jurnalSelect.appendChild(new Option(mapel, mapel));
+                hadirSelect.appendChild(new Option(mapel, mapel));
+            });
+
+            // 4. Kembalikan nilai yang tadi dipilih
+            jurnalSelect.value = currentJurnalVal;
+            hadirSelect.value = currentHadirVal;
         }
 function populateBulanTahunFilters() {
             const bulanSelect = ui.daftarHadir.filterBulan;
@@ -4354,6 +4392,7 @@ function populateBulanTahunFilters() {
             const classId = ui.daftarHadir.filterKelas.value;
             const month = parseInt(ui.daftarHadir.filterBulan.value, 10); // 0-11
             const year = parseInt(ui.daftarHadir.filterTahun.value, 10);
+            const mapelFilter = ui.daftarHadir.filterMapel.value;
 
             if (!classId) {
                 ui.daftarHadir.container.innerHTML = `<p class="text-center text-slate-500 py-4">Pilih kelas untuk menampilkan data absensi.</p>`;
@@ -4369,6 +4408,7 @@ function populateBulanTahunFilters() {
             const jurnalEntries = window.appState.allJurnalMengajar
                 .filter(j => {
                     if (j.classId !== classId) return false;
+                    if (mapelFilter && j.mataPelajaran !== mapelFilter) return false;
                     const t = new Date(j.timestamp);
                     return t.getMonth() === month && t.getFullYear() === year;
                 })
@@ -4381,7 +4421,7 @@ function populateBulanTahunFilters() {
             tableHTML += '<thead class="bg-slate-50">';
             tableHTML += '<tr>';
             tableHTML += '<th class="px-3 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">No</th>';
-            tableHTML += '<th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Nama Mahasiswa</th>';
+            tableHTML += '<th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Nama Siswa</th>';
             
             // ==========================================================
             // PERBAIKAN: Ubah batas pertemuan menjadi 15
@@ -4722,6 +4762,7 @@ ui.addStudentForm.addEventListener('submit', async e => {
             if (ui.daftarHadir.filterKelas) ui.daftarHadir.filterKelas.addEventListener('change', renderDaftarHadirRoster);
             if (ui.daftarHadir.filterBulan) ui.daftarHadir.filterBulan.addEventListener('change', renderDaftarHadirRoster);
             if (ui.daftarHadir.filterTahun) ui.daftarHadir.filterTahun.addEventListener('change', renderDaftarHadirRoster);
+            if (ui.daftarHadir.filterMapel) ui.daftarHadir.filterMapel.addEventListener('change', renderDaftarHadirRoster);
 
             // Panggil populasi filter
             populateBulanTahunFilters();
@@ -4822,15 +4863,26 @@ if (ui.settings.quranScopeForm) {
                     if (!currentUserUID) return showToast("Gagal menyimpan, user tidak ditemukan.", "error");
 
                     setButtonLoading(ui.profile.saveBtn, true);
+                    
+                    // 1. Ambil data Mapel dan ubah jadi Array
+                    const mapelString = ui.profile.mapelInput.value || '';
+                    const mapelArray = mapelString
+                        .split(',')                
+                        .map(m => m.trim())        
+                        .filter(m => m.length > 0); 
+                    
+                    // 2. Siapkan data untuk update
                     const updatedData = {
                         ttl: ui.profile.pobInput.value.trim(),
+                        mapel: mapelArray // <-- Ini bagian yang penting
                     };
 
-                    // Hanya admin yang boleh update namaLengkap
+                    // 3. (Opsional) Admin boleh update nama
                     if (window.appState.loggedInRole === 'admin_lembaga') {
                         updatedData.namaLengkap = ui.profile.fullNameInput.value.trim();
                     }
 
+                    // 4. Simpan ke database
                     try {
                         await db.collection('users').doc(currentUserUID).update(updatedData);
                         showToast("Profil berhasil diperbarui.", "success");
@@ -4841,7 +4893,6 @@ if (ui.settings.quranScopeForm) {
                         setButtonLoading(ui.profile.saveBtn, false);
                     }
                 });
-
                 ui.profile.pictureInput.addEventListener('change', (e) => {
                     const file = e.target.files[0];
                     if (!file) return;
@@ -5101,6 +5152,9 @@ if (ui.settings.quranScopeForm) {
                         if (typeof renderJurnalMengajarList === 'function') {
                             renderJurnalMengajarList();
                         }
+                        if (typeof renderDaftarHadirRoster === 'function') {
+                            renderDaftarHadirRoster(); // Render juga tabel di halaman Daftar Hadir
+                        }
                     }, error => commonErrorHandler(error, 'jurnal_mengajar'));
 
                 db.collection('jurnal_belajar').where('lembagaId', '==', lembagaId)
@@ -5124,6 +5178,9 @@ if (ui.settings.quranScopeForm) {
                     .onSnapshot(snapshot => {
                         window.appState.allUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                         //checkUserProfileCompletion(); // <-- TAMBAHKAN BARIS INI
+                        if (typeof populateMapelDropdowns === 'function') {
+                            populateMapelDropdowns();
+                        }
                         renderAll();
                         const activePage = document.querySelector('.page.page-active');
                         if (activePage && activePage.id === 'profil-page' && typeof window.populateProfileForm === 'function') {
