@@ -254,7 +254,8 @@ const ui = {
     sidebarLinks: document.querySelectorAll('#sidebar-nav .sidebar-link'),
     bottomNavLinks: document.querySelectorAll('#bottom-nav .bottom-nav-link'),
     profileMenuLinks: document.querySelectorAll('#profil-page .card a[data-page]'), // Link di dalam profil
-
+    toggleLainnyaBtn: document.getElementById('toggle-lainnya-menu'),
+    menuLainnyaDiv: document.getElementById('sidebar-menu-lainnya'),
     mainContentView: document.getElementById('main-content-view'),
     homeBtn: document.getElementById('home-btn'), // Tetap ada, meski mungkin disembunyikan
     pages: document.querySelectorAll('#page-content > .page'), // Targetkan .page di dalam #page-content
@@ -272,7 +273,8 @@ const ui = {
         saveBtn: document.getElementById('save-profile-btn'),
         progressContainer: document.getElementById('upload-progress-container'),
         progressBar: document.getElementById('upload-progress'),
-        mapelInput: document.getElementById('profile-mapel')
+        mapelInput: document.getElementById('profile-mapel'),
+        profileMapelContainer: document.getElementById('profile-mapel-container')
     },
     daftarHadir: {
             filterKelas: document.getElementById('hadir-filter-kelas'),
@@ -440,7 +442,7 @@ function setupUIForRole(role) {
                 link.classList.add('hidden');
                 return;
             }
-
+            
             const page = link.dataset.page;
             // Sembunyikan link jika halaman tidak diizinkan untuk siswa
             if (page && !siswaAllowedPages.includes(page)) {
@@ -449,7 +451,9 @@ function setupUIForRole(role) {
                 link.classList.remove('hidden'); // Pastikan link yang diizinkan terlihat
             }
         });
-
+        if (ui.toggleLainnyaBtn) ui.toggleLainnyaBtn.classList.add('hidden');
+        if (ui.menuLainnyaDiv) ui.menuLainnyaDiv.classList.add('hidden');
+        if (ui.toggleLainnyaBtn) ui.toggleLainnyaBtn.classList.remove('hidden');
         // Sembunyikan tombol spesifik guru
         if (ui.addStudentModalBtn) ui.addStudentModalBtn.classList.add('hidden');
         if (ui.addBulkHafalanBtn) ui.addBulkHafalanBtn.classList.add('hidden');
@@ -471,7 +475,7 @@ function setupUIForRole(role) {
                     link.classList.remove('hidden');
                 }
             });
-
+            if (ui.toggleLainnyaBtn) ui.toggleLainnyaBtn.classList.remove('hidden');
         // Tampilkan tombol spesifik guru
         if (ui.addStudentModalBtn) ui.addStudentModalBtn.classList.remove('hidden');
         if (ui.addBulkHafalanBtn) ui.addBulkHafalanBtn.classList.remove('hidden');
@@ -500,7 +504,8 @@ function setupUIForRole(role) {
                 link.classList.remove('hidden');
             }
         });
-
+        if (ui.toggleLainnyaBtn) ui.toggleLainnyaBtn.classList.add('hidden');
+        if (ui.menuLainnyaDiv) ui.menuLainnyaDiv.classList.add('hidden');
         // Sembunyikan tombol spesifik guru
         if (ui.addStudentModalBtn) ui.addStudentModalBtn.classList.add('hidden');
         if (ui.addBulkHafalanBtn) ui.addBulkHafalanBtn.classList.add('hidden');
@@ -3820,9 +3825,17 @@ function renderStudentProgressList() {
 window.populateProfileForm = function() {
     const currentUserUID = window.appState.currentUserUID;
     const userProfile = window.appState.allUsers.find(u => u.id === currentUserUID);
+    const role = window.appState.loggedInRole;
 
     const previewEl = ui.profile.picturePreview; 
     if (!previewEl) return;
+    if (ui.profile.profileMapelContainer) {
+        if (role === 'admin_lembaga') {
+            ui.profile.profileMapelContainer.classList.add('hidden');
+        } else {
+            ui.profile.profileMapelContainer.classList.remove('hidden');
+        }
+    }
 
     // URL Placeholder default (jika user data belum ada)
     let placeholder = 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
