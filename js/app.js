@@ -3,6 +3,7 @@ window.appState = {
     allClasses: [],
     allStudents: [],
     allJurnalMengajar: [],
+    allMateri: [],
     allJurnal: [],
     allUsers: [],
     currentPageJurnalMengajar: 1, 
@@ -299,7 +300,29 @@ jurnalMengajar: {
             list: document.getElementById('jurnal-mengajar-list'),
             pagination: document.getElementById('jurnal-mengajar-pagination'),
         },
-    // ... (sisa properti ui seperti pinModal, guruPinSettings, dll tidak berubah)
+    materi_belajar: {
+            listContainer: document.getElementById('materi-list-container'),
+            filterSearch: document.getElementById('materi-filter-search'),
+            filterMapel: document.getElementById('materi-filter-mapel'),
+            filterDate: document.getElementById('materi-filter-date'),
+            addBtn: document.getElementById('materi-add-btn')
+        },
+        materi_editor: {
+            page: document.getElementById('materi_editor-page'),
+            form: document.getElementById('materi-editor-form'),
+            editId: document.getElementById('materi-edit-id'),
+            judul: document.getElementById('materi-judul'),
+            mapelSelect: document.getElementById('materi-mapel-select'),
+            url: document.getElementById('materi-url'),
+            submitBtn: document.getElementById('materi-submit-btn'),
+            backBtn: document.getElementById('materi-editor-back-btn')
+        },
+        materi_detail: {
+            page: document.getElementById('materi_detail-page'),
+            frame: document.getElementById('materi-detail-frame'),
+            backBtn: document.getElementById('materi-detail-back-btn'),
+            reloadBtn: document.getElementById('materi-detail-reload-btn')
+        },
     pinModal: {
         el: document.getElementById('pin-modal'),
         form: document.getElementById('pin-form'),
@@ -478,6 +501,7 @@ function setupUIForRole(role) {
             if (ui.toggleLainnyaBtn) ui.toggleLainnyaBtn.classList.remove('hidden');
         // Tampilkan tombol spesifik guru
         if (ui.addStudentModalBtn) ui.addStudentModalBtn.classList.remove('hidden');
+        if (ui.materi_belajar.addBtn) ui.materi_belajar.addBtn.classList.remove('hidden');
         if (ui.addBulkHafalanBtn) ui.addBulkHafalanBtn.classList.remove('hidden');
         // --- ▼▼▼ TAMBAHKAN BLOK INI (untuk memastikan terlihat) ▼▼▼ ---
         const siswaSearch = document.getElementById('siswa-search-student');
@@ -508,6 +532,7 @@ function setupUIForRole(role) {
         if (ui.menuLainnyaDiv) ui.menuLainnyaDiv.classList.add('hidden');
         // Sembunyikan tombol spesifik guru
         if (ui.addStudentModalBtn) ui.addStudentModalBtn.classList.add('hidden');
+        if (ui.materi_belajar.addBtn) ui.materi_belajar.addBtn.classList.add('hidden');
         if (ui.addBulkHafalanBtn) ui.addBulkHafalanBtn.classList.add('hidden');
     }
 }
@@ -541,7 +566,6 @@ function updateNavActiveState(pageId) {
 
 function _showPageImpl(pageId) {
     window.scrollTo(0, 0)
-    // --- Logika Baru: Ganti halaman dengan toggle kelas .page-active ---
     ui.pages.forEach(p => {
         if (p.id === `${pageId}-page`) {
             p.classList.add('page-active');
@@ -551,6 +575,9 @@ function _showPageImpl(pageId) {
         if (pageId === 'profil' && typeof window.populateProfileForm === 'function') {
     window.populateProfileForm();
 }
+if (pageId === 'materi_detail' && typeof renderMateriDetailPage === 'function') {
+            renderMateriDetailPage();
+        }
 if (pageId === 'detail_siswa') { 
     
     // 1. Coba ambil ID dari state memori (navigasi normal)
@@ -586,9 +613,12 @@ if (pageId === 'detail_siswa') {
         profil: "Profil Saya", ringkasan: "Dashboard", kelas: "Manajemen Kelas", 
         riwayat: "Riwayat", tentang: "Tentang Aplikasi", 
         pengaturan: "Pengaturan", tes_hafalan: "Tes Hafalan", 
-        detail_siswa: "Detail Siswa", manajemen_akun: "Manajemen Akun", // <-- TAMBAHKAN INI
-        jurnal: "Jurnal Mengajar", // Judul baru untuk 'jurnal-page'
-        daftar_hadir: "Daftar Absensi"// Judul baru untuk 'daftar_hadir-page'
+        detail_siswa: "Detail Siswa", manajemen_akun: "Manajemen Akun",
+        jurnal: "Jurnal Mengajar",
+        daftar_hadir: "Daftar Absensi",
+        materi_belajar: "Materi Belajar",
+        materi_editor: "Editor Materi",
+        materi_detail: "Baca Materi"
     };
 let title = pageTitles[pageId] || "Dashboard";
         if (pageId === 'detail_siswa') {
@@ -4312,7 +4342,9 @@ window.populateSettingsForms = function() {
         function populateMapelDropdowns() {
             const jurnalSelect = ui.jurnalMengajar.matapelajaran;
             const hadirSelect = ui.daftarHadir.filterMapel;
-            if (!jurnalSelect || !hadirSelect) return;
+            const materiEditorSelect = ui.materi_editor.mapelSelect;
+            const materiFilterSelect = ui.materi_belajar.filterMapel;
+            if (!jurnalSelect || !hadirSelect || !materiEditorSelect || !materiFilterSelect) return;
 
             // 1. Ambil data Mapel dari profil user yang login
             const currentUser = window.appState.allUsers.find(u => u.id === window.appState.currentUserUID);
@@ -4321,20 +4353,27 @@ window.populateSettingsForms = function() {
             // Simpan nilai yang sedang dipilih (jika ada)
             const currentJurnalVal = jurnalSelect.value;
             const currentHadirVal = hadirSelect.value;
-
+            const currentMateriEditorVal = materiEditorSelect.value;
+            const currentMateriFilterVal = materiFilterSelect.value;
             // 2. Kosongkan dropdown (sisakan opsi default)
             while (jurnalSelect.options.length > 1) jurnalSelect.remove(1);
             while (hadirSelect.options.length > 1) hadirSelect.remove(1);
+            while (materiEditorSelect.options.length > 1) materiEditorSelect.remove(1);
+            while (materiFilterSelect.options.length > 1) materiFilterSelect.remove(1);
 
             // 3. Isi kedua dropdown
             mapelArray.sort().forEach(mapel => {
                 jurnalSelect.appendChild(new Option(mapel, mapel));
                 hadirSelect.appendChild(new Option(mapel, mapel));
+                materiEditorSelect.appendChild(new Option(mapel, mapel));
+                materiFilterSelect.appendChild(new Option(mapel, mapel));
             });
 
             // 4. Kembalikan nilai yang tadi dipilih
             jurnalSelect.value = currentJurnalVal;
             hadirSelect.value = currentHadirVal;
+            materiEditorSelect.value = currentMateriEditorVal; 
+            materiFilterSelect.value = currentMateriFilterVal;
         }
 function populateBulanTahunFilters() {
             const bulanSelect = ui.daftarHadir.filterBulan;
@@ -4498,6 +4537,161 @@ function populateBulanTahunFilters() {
 
             // 6. Injeksi ke DOM
             ui.daftarHadir.container.innerHTML = tableHTML;
+        }
+        /**
+         * Merender daftar materi di halaman #materi_belajar-page
+         */
+        function renderMateriList() {
+            if (!ui.materi_belajar.listContainer) return;
+
+            // 1. Dapatkan filter
+            const searchTerm = ui.materi_belajar.filterSearch.value.toLowerCase();
+            const mapelFilter = ui.materi_belajar.filterMapel.value;
+            const dateSort = ui.materi_belajar.filterDate.value;
+
+            // 2. Filter data
+            let filteredMateri = window.appState.allMateri.filter(m => {
+                const titleMatch = m.judul.toLowerCase().includes(searchTerm);
+                const mapelMatch = !mapelFilter || (m.mapel === mapelFilter);
+                return titleMatch && mapelMatch;
+            });
+
+            // 3. Urutkan data
+            filteredMateri.sort((a, b) => {
+                return dateSort === 'terbaru' ? (b.timestamp - a.timestamp) : (a.timestamp - b.timestamp);
+            });
+
+            // 4. Render ke DOM
+            ui.materi_belajar.listContainer.innerHTML = '';
+            if (filteredMateri.length === 0) {
+                ui.materi_belajar.listContainer.innerHTML = `<p class="text-center text-slate-500 py-4">Belum ada materi yang dibuat.</p>`;
+                return;
+            }
+
+            const fragment = document.createDocumentFragment();
+            const userMap = new Map(window.appState.allUsers.map(u => [u.id, u.namaLengkap]));
+            
+            filteredMateri.forEach(materi => {
+                const item = document.createElement('div');
+                item.className = 'materi-item block p-4 rounded-lg border bg-white hover:bg-slate-50 cursor-pointer';
+                item.dataset.id = materi.id; // Untuk diklik
+
+                const tgl = new Date(materi.timestamp).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+                const penulis = userMap.get(materi.guruId) || 'Guru';
+
+                // Tampilkan tombol Edit hanya untuk guru
+                const editButton = (window.appState.loggedInRole !== 'siswa') ? 
+                    `<button data-action="edit-materi" class="btn btn-sm btn-secondary ml-auto">Edit</button>` : '';
+
+                item.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h3 class="font-semibold text-lg text-teal-700">${materi.judul}</h3>
+                            <p class="text-sm text-slate-500">${materi.mapel} • ${penulis} • ${tgl}</p>
+                        </div>
+                        ${editButton}
+                    </div>
+                `;
+                fragment.appendChild(item);
+            });
+            ui.materi_belajar.listContainer.appendChild(fragment);
+        }
+
+        /**
+         * Menangani submit form editor materi
+         */
+        async function handleMateriEditorSubmit(e) {
+            e.preventDefault();
+            setButtonLoading(ui.materi_editor.submitBtn, true);
+
+            const editId = ui.materi_editor.editId.value;
+            const payload = {
+                judul: ui.materi_editor.judul.value,
+                mapel: ui.materi_editor.mapelSelect.value,
+                url: ui.materi_editor.url.value,
+                timestamp: Date.now(),
+                guruId: currentUserUID,
+                lembagaId: lembagaId
+            };
+
+            try {
+                if (editId) {
+                    payload.id = editId;
+                    await onlineDB.update('materi_belajar', payload);
+                    showToast("Materi berhasil diperbarui.");
+                } else {
+                    await onlineDB.add('materi_belajar', payload);
+                    showToast("Materi berhasil dipublikasikan.");
+                }
+                ui.materi_editor.form.reset();
+                showPage('materi_belajar');
+            } catch (error) {
+                console.error("Gagal simpan materi:", error);
+                showToast("Gagal menyimpan materi.", "error");
+            } finally {
+                setButtonLoading(ui.materi_editor.submitBtn, false);
+            }
+        }
+
+        /**
+         * Memuat materi ke editor untuk diedit
+         */
+        function loadMateriForEdit(id) {
+            const materi = window.appState.allMateri.find(m => m.id === id);
+            if (!materi) return;
+
+            ui.materi_editor.editId.value = materi.id;
+            ui.materi_editor.judul.value = materi.judul;
+            ui.materi_editor.mapelSelect.value = materi.mapel;
+            ui.materi_editor.url.value = materi.url;
+            
+            showPage('materi_editor');
+        }
+
+        /**
+         * Menetapkan ID materi yang akan dibaca
+         */
+        function showMateriDetail(id) {
+            window.appState.currentMateriId = id; // Simpan ID
+            sessionStorage.setItem('currentMateriId', id); // Simpan ke session
+            showPage('materi_detail');
+        }
+
+function renderMateriDetailPage() {
+            // Coba ambil ID dari state, lalu dari session
+            let materiId = window.appState.currentMateriId;
+            if (!materiId) {
+                materiId = sessionStorage.getItem('currentMateriId');
+            }
+            if (!materiId) {
+                showPage('materi_belajar'); return;
+            }
+
+            const materi = window.appState.allMateri.find(m => m.id === materiId);
+            if (!materi) {
+                showToast("Materi tidak ditemukan.", "error");
+                showPage('materi_belajar');
+                return;
+            }
+
+            if (ui.materi_detail.frame) {
+                const originalUrl = materi.url;
+                const cacheBuster = "t=" + Date.now();
+                
+                let newUrl;
+
+                // Cek apakah URL asli sudah punya query string (?)
+                if (originalUrl.includes('?')) {
+                    // Jika ya, tambahkan parameter baru dengan (&)
+                    newUrl = originalUrl + "&" + cacheBuster;
+                } else {
+                    // Jika tidak, tambahkan parameter baru dengan (?)
+                    newUrl = originalUrl + "?" + cacheBuster;
+                }
+
+                // Setel URL yang unik. Ini MEMAKSA browser untuk memuat ulang.
+                ui.materi_detail.frame.src = newUrl;
+            }
         }
         async function initApp() {
         const headerActions = document.getElementById('header-actions');
@@ -4776,7 +4970,53 @@ ui.addStudentForm.addEventListener('submit', async e => {
             if (ui.daftarHadir.filterBulan) ui.daftarHadir.filterBulan.addEventListener('change', renderDaftarHadirRoster);
             if (ui.daftarHadir.filterTahun) ui.daftarHadir.filterTahun.addEventListener('change', renderDaftarHadirRoster);
             if (ui.daftarHadir.filterMapel) ui.daftarHadir.filterMapel.addEventListener('change', renderDaftarHadirRoster);
+            // Listener untuk Halaman Materi Belajar
+            if (ui.materi_belajar.addBtn) {
+                ui.materi_belajar.addBtn.addEventListener('click', () => {
+                    ui.materi_editor.form.reset();
+                    ui.materi_editor.editId.value = '';
+                    showPage('materi_editor');
+                });
+            }
+            if (ui.materi_belajar.filterSearch) ui.materi_belajar.filterSearch.addEventListener('input', debounce(renderMateriList, 300));
+            if (ui.materi_belajar.filterMapel) ui.materi_belajar.filterMapel.addEventListener('change', renderMateriList);
+            if (ui.materi_belajar.filterDate) ui.materi_belajar.filterDate.addEventListener('change', renderMateriList);
 
+            // Listener untuk klik di daftar materi
+            if (ui.materi_belajar.listContainer) {
+                ui.materi_belajar.listContainer.addEventListener('click', (e) => {
+                    const editBtn = e.target.closest('button[data-action="edit-materi"]');
+                    const materiItem = e.target.closest('.materi-item');
+                    
+                    if (editBtn && materiItem) { // Klik tombol edit
+                        e.stopPropagation(); // Hentikan agar tidak memicu klik item
+                        loadMateriForEdit(materiItem.dataset.id);
+                    } else if (materiItem) { // Klik item (untuk membaca)
+                        showMateriDetail(materiItem.dataset.id);
+                    }
+                });
+            }
+
+            // Listener untuk Halaman Editor
+            if (ui.materi_editor.form) ui.materi_editor.form.addEventListener('submit', handleMateriEditorSubmit);
+            if (ui.materi_editor.backBtn) ui.materi_editor.backBtn.addEventListener('click', () => showPage('materi_belajar'));
+
+            if (ui.materi_detail.backBtn) {
+                ui.materi_detail.backBtn.addEventListener('click', () => {
+                    window.appState.currentMateriId = null; // Hapus ID saat kembali
+                    sessionStorage.removeItem('currentMateriId');
+                    showPage('materi_belajar');
+                });
+            }
+            if (ui.materi_detail.reloadBtn) {
+                ui.materi_detail.reloadBtn.addEventListener('click', () => {
+                    // Panggil ulang fungsi render (yang sudah kita perbaiki)
+                    if (typeof renderMateriDetailPage === 'function') {
+                        renderMateriDetailPage();
+                        showToast("Memuat ulang materi...", "info");
+                    }
+                });
+            }
             // Panggil populasi filter
             populateBulanTahunFilters();
             if (ui.profileSetupModal.form) {
@@ -5187,6 +5427,18 @@ if (ui.settings.quranScopeForm) {
                     renderAll(); // Tetap panggil renderAll
 
                 }, error => commonErrorHandler(error, 'jurnal_belajar'));
+                db.collection('materi_belajar').where('lembagaId', '==', lembagaId)
+                    .onSnapshot(snapshot => {
+                        window.appState.allMateri = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                        // Panggil render spesifik
+                        if (typeof renderMateriList === 'function') {
+                            renderMateriList();
+                        }
+                        // Jika sedang di halaman detail, render ulang
+                        if (document.getElementById('materi_detail-page').classList.contains('page-active')) {
+                            renderMateriDetailPage();
+                        }
+                    }, error => commonErrorHandler(error, 'materi_belajar'));
                                 db.collection('users').where('lembagaId', '==', lembagaId)
                     .onSnapshot(snapshot => {
                         window.appState.allUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
